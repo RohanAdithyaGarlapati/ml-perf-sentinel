@@ -1,3 +1,4 @@
+![perf-ci](https://github.com/RohanAdithyaGarlapati/ml-perf-sentinel/actions/workflows/perf-ci.yml/badge.svg)
 # ml-perf-sentinel
 
 A miniature of the testing and performance-characterization infrastructure used to
