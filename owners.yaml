@@ -1,0 +1,8 @@
+default_owner: "@perf-infra-oncall"
+routes:
+  - pattern: "tiny_cnn*"
+    owner: "@vision-kernels-team"
+  - pattern: "mini_transformer*"
+    owner: "@transformer-runtime-team"
+  - pattern: "mlp*"
+    owner: "@core-kernels-team"

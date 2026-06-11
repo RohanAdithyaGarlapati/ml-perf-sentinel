@@ -1,0 +1,66 @@
+name: perf-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ------------------------------------------------------------------
+  # Distributed benchmark workers: a matrix of runners each executes the
+  # suite and uploads raw results as artifacts (stand-in for S3).
+  # ------------------------------------------------------------------
+  bench:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        worker: [w1, w2, w3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run benchmark suite
+        env:
+          WORKER_ID: ${{ matrix.worker }}
+        run: python -m bench.harness --run-id "run-${{ github.run_number }}" --worker-id "$WORKER_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.worker }}
+          path: results/raw/
+
+  # ------------------------------------------------------------------
+  # Release gate: merge results from all workers, run ETL + statistical
+  # regression detection, fail the build if a regression is found.
+  # ------------------------------------------------------------------
+  gate:
+    needs: bench
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: results/raw/
+          merge-multiple: true
+      - name: Seed baseline history
+        # CI runners are ephemeral; in production the baseline lives in object
+        # storage (S3ResultStore). For the demo we synthesize the baseline.
+        run: python scripts/seed_history.py --runs 20 --workers 2
+      - name: Run unit tests
+        run: pytest -q
+      - name: ETL + regression detection (release gate)
+        run: python scripts/run_pipeline.py --fail-on-regression
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: regression-alerts
+          path: alerts/

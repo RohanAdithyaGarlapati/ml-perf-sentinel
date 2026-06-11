@@ -1,0 +1,15 @@
+numpy>=1.26
+scipy>=1.11
+duckdb>=0.10
+pandas>=2.0
+pyyaml>=6.0
+pytest>=8.0
+plotly>=5.20
+streamlit>=1.33
+
+# Optional: real model benchmarking with eager vs torch.compile modes.
+# CPU-only install:  pip install torch --index-url https://download.pytorch.org/whl/cpu
+# torch
+
+# Optional: S3-backed result storage (pipeline/storage.py:S3ResultStore)
+# boto3
