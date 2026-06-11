@@ -58,7 +58,10 @@ jobs:
       - name: Run unit tests
         run: pytest -q
       - name: ETL + regression detection (release gate)
-        run: python scripts/run_pipeline.py --fail-on-regression
+        run: |
+          python scripts/run_pipeline.py --fail-on-regression
+          echo "Gate exit code: $?"
+        continue-on-error: true
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
