@@ -13,29 +13,34 @@ silicon) detect performance regressions before a release reaches customers.
 **Live S3 integration:** benchmark results write directly to Amazon S3 (us-east-2).
 The storage layer is fully abstracted — local and S3 backends are interchangeable
 with a single CLI flag.
-┌──────────────────────────────────────────────┐
-┌───────────────┐  raw JSON   │                 ResultStore                  │
-│ bench harness │────────────▶│  LocalResultStore  /  S3ResultStore (boto3)  │
-│  (N workers,  │             └──────────────────────┬───────────────────────┘
-│ eager + torch.│                                    │ ETL (validate, flatten,
-│   compile)    │                                    ▼  idempotent load)
-└───────────────┘                          ┌──────────────────┐
-│ DuckDB warehouse │
-└────────┬─────────┘
-┌──────────────────────────────┼──────────────────────────┐
-▼                              ▼                          ▼
-┌─────────────────────┐      ┌─────────────────────┐    ┌────────────────────┐
-│ regression detector │      │ changepoint triage  │    │ Streamlit dashboard│
-│ (z-score + Mann-    │─────▶│ ("which run broke   │    │ trends, gate, eager│
-│  Whitney U)         │      │   it?")             │    │ vs compiled speedup│
-└──────────┬──────────┘      └──────────┬──────────┘    └────────────────────┘
-└──────────────┬─────────────┘
-▼
-┌──────────────────────────────┐
-│ owner-routed alerts (YAML    │
-│ routing) + CI release gate   │
-└──────────────────────────────┘
-## Quickstart (2 minutes, no GPU/AWS needed)
+
+## Architecture
+
+```
+                                ┌──────────────────────────────────────────────┐
+  ┌───────────────┐  raw JSON   │                 ResultStore                  │
+  │ bench harness │────────────▶│  LocalResultStore  /  S3ResultStore (boto3)  │
+  │  (N workers,  │             └──────────────────────┬───────────────────────┘
+  │ eager + torch │                                    │ ETL (validate, flatten,
+  │   .compile)   │                                    ▼  idempotent load)
+  └───────────────┘                          ┌──────────────────┐
+                                             │ DuckDB warehouse │
+                                             └────────┬─────────┘
+              ┌──────────────────────────────┬────────┴──────────────────────┐
+              ▼                              ▼                               ▼
+  ┌─────────────────────┐      ┌─────────────────────┐         ┌────────────────────┐
+  │ regression detector │      │ changepoint triage  │         │ Streamlit dashboard│
+  │ (z-score + Mann-    │─────▶│  which run broke it?│         │ trends, gate,      │
+  │  Whitney U)         │      │                     │         │ eager vs compiled  │
+  └──────────┬──────────┘      └──────────┬──────────┘         └────────────────────┘
+             └────────────────┬───────────┘
+                              ▼
+             ┌──────────────────────────────┐
+             │ owner-routed alerts + YAML   │
+             │ routing + CI release gate    │
+             └──────────────────────────────┘
+```
+## Quickstart (2 minutes)
 
 ```bash
 pip install -r requirements.txt
