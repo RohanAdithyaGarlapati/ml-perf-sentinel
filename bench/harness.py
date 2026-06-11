@@ -112,10 +112,19 @@ def main() -> None:
     parser.add_argument("--inject-regression", dest="inject", default=None,
                         help="Workload name to artificially slow down (demo only)")
     parser.add_argument("--slowdown", type=float, default=1.3)
+    parser.add_argument("--store", choices=["local", "s3"], default="local")
+    parser.add_argument("--bucket", default=None)
     args = parser.parse_args()
 
-    result = run_suite(args.run_id, args.worker_id, inject=args.inject, slowdown=args.slowdown)
-    store = LocalResultStore(args.results_dir)
+    if args.store == "s3":
+        from pipeline.storage import S3ResultStore
+        store = S3ResultStore(args.bucket, prefix="results/raw")
+        print(f"[harness] using S3 store: s3://{args.bucket}/results/raw")
+    else:
+        store = LocalResultStore(args.results_dir)
+
+    result = run_suite(args.run_id, args.worker_id,
+                       inject=args.inject, slowdown=args.slowdown)
     path = store.write_result(result)
     print(f"[harness] wrote {len(result['records'])} records -> {path}")
     print(json.dumps({r["workload"] + "/" + r["mode"] + f"/bs{r['batch_size']}":

@@ -34,9 +34,16 @@ def main() -> int:
     parser.add_argument("--results-dir", default="results/raw")
     parser.add_argument("--db", default="results/perf.duckdb")
     parser.add_argument("--fail-on-regression", action="store_true")
+    parser.add_argument("--store", choices=["local", "s3"], default="local")
+    parser.add_argument("--bucket", default=None)
     args = parser.parse_args()
 
-    store = LocalResultStore(args.results_dir)
+    if args.store == "s3":
+        from pipeline.storage import S3ResultStore
+        store = S3ResultStore(args.bucket, prefix="results/raw")
+        print(f"[pipeline] using S3 store: s3://{args.bucket}/results/raw")
+    else:
+        store = LocalResultStore(args.results_dir)
 
     if args.bench:
         result = run_suite(f"run-{uuid.uuid4().hex[:8]}", "w0",

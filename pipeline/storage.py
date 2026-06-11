@@ -57,7 +57,7 @@ class S3ResultStore(ResultStore):
     def __init__(self, bucket: str, prefix: str = "results/raw") -> None:
         import boto3  # imported lazily so the package is optional
 
-        self.s3 = boto3.client("s3")
+        self.s3 = boto3.client("s3", region_name="us-east-2")
         self.bucket = bucket
         self.prefix = prefix.rstrip("/")
 
